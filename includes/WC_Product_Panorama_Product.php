@@ -107,7 +107,8 @@ class WC_Product_Panorama_Product extends WC_Product {
 				'post_type'      => 'psp_projects',
 				'posts_per_page' => -1,
 				'meta_key'		 => '_psp_woocommerce_template',
-				'meta_value'     => 'yes'
+				'meta_value'     => 'yes',
+				'post_status'	 => 'any'
 			)
 		);
 
