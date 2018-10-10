@@ -3,7 +3,7 @@
  * Plugin Name: Panorama WooCommerce
  * Plugin URI:  https://www.projectpanorama.com/add-ons/psp-woocommerce
  * Description: Allow a user to purchase a WooCommerce product to duplicate a Project
- * Version:     1.0.0
+ * Version:     1.0.1
  * Author:      SnapOrbital
  * Author URI:  https://www.snaporbital.com/
  * License:     GPL2
@@ -11,7 +11,7 @@
  * Domain Path: /languages/
  */
 
-define( 'PSP_WOO_VER', '1.0' );
+define( 'PSP_WOO_VER', '1.0.1' );
 
 /**
  * Class Panorama_WooCommerce
