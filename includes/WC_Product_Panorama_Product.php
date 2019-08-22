@@ -73,7 +73,11 @@ class WC_Product_Panorama_Product extends WC_Product {
                     $('.woocommerce_options_panel').hide();
                     $('#panorama_product').show();
                     $('.product_data_tabs .panorama_tab').addClass('active');
-                }
+					$('#product_attributes').hide();
+					$('#variable_product_options').hide();
+                } else {
+					$('#panorama_product').hide();
+				}
 
                 $('#product-type').on('change', function() {
 
@@ -84,7 +88,12 @@ class WC_Product_Panorama_Product extends WC_Product {
                         $('#general_product_data .pricing').show();
                         $('.woocommerce_options_panel').hide();
                         $('#panorama_product').show();
-                    }
+						$('#product_attributes').hide();
+						$('#variable_product_options').hide();
+                    } else {
+						$('#panorama_product').hide();
+					}
+
                 });
             });
 
@@ -108,7 +117,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 				'posts_per_page' => -1,
 				'meta_key'		 => '_psp_woocommerce_template',
 				'meta_value'     => 'yes',
-				'post_status'	 => 'any'
+				'post_status'	 => 'draft'
 			)
 		);
 
@@ -209,7 +218,9 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 		$tabs['shipping']['class'][]       = 'hide_if_panorama_product';
 		$tabs['linked_product']['class'][] = 'hide_if_panorama_product';
-		$tabs['attribute']['class'][]      = 'hide_if_panorama_product';
+		$tabs['attribute']['class'][]      = 'show_if_panorama_product';
+		$tabs['variations']['class'][] 	   = 'show_if_panorama_product';
+
 
 		return $tabs;
 	}
@@ -252,7 +263,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 *
 	 * @return void
 	 */
-	function panorama_settings_icon() {
+	public function panorama_settings_icon() {
 		?>
         <style>
             #woocommerce-product-data ul.wc-tabs li.panorama_options a:before {
@@ -337,12 +348,14 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 		$order = wc_get_order( $order_id );
 
-		if ( $order && $order->status != 'completed' ) {
+		$status = apply_filters( 'psp_woocommerce_order_status', 'completed' );
+
+		if ( $order && $order->status != $status ) {
 
 			$result = WC_Product_Panorama_Product::panorama_process_order( $order_id );
 
 			if( $result ) {
-				$order->update_status( 'completed' );
+				$order->update_status( $status );
 			}
 
 		}
@@ -465,7 +478,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 			$new_project = array(
 				'ID'          	=> $new_id,
 				'post_status' 	=> 'publish',
-				'post_title'	=> $user->first_name . ' ' . $user->last_name . ': ' . get_the_title($new_id),
+				'post_title'	=> $user->first_name . ' ' . $user->last_name . ': ' . get_the_title($project_id),
 				'post_name'		=>	''
 			);
 
@@ -523,7 +536,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 *
 	 * @return void
 	 */
-	function panorama_woocommerce_save_meta( $post_id ) {
+	public function panorama_woocommerce_save_meta( $post_id ) {
 
 		if( 'psp_projects' != get_post_type($post_id) ) {
 			return;
@@ -764,7 +777,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 	}
 
-	function psp_woocommerce_push_update( $transient ) {
+	public function psp_woocommerce_push_update( $transient ) {
 
 		if ( empty($transient->checked ) ) {
             return $transient;
