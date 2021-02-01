@@ -191,6 +191,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 				$product->update_meta_data( '_panorama_project_id', $project_id );
 				$product->update_meta_data( '_psp_user_role', $user_role );
 				$product->save();
+
 			} else {
 				// WooCommerce 2.6.
 				update_post_meta( $post_id, '_panorama_project_id', $project_id );
@@ -299,7 +300,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 			if ( 'panorama_product' === $product->get_type() ) {
 
 				$project_id = method_exists( $product, 'get_meta' ) ? $product->get_meta( '_panorama_project_id' ) : get_post_meta( $product_id, '_panorama_project_id', true );
-				$new_id 	= WC_Product_Panorama_Product::duplicate_project( $project_id, $user_id );
+				$new_id 	= WC_Product_Panorama_Product::duplicate_project( $project_id, $user_id, $order_id );
 
 				add_post_meta( $order_id, '_purchased_psp_project', $new_id );
 
@@ -456,7 +457,7 @@ class WC_Product_Panorama_Product extends WC_Product {
      * @param int $user_id    The user that purchased the project.
 	 * @return void
 	 */
-	static function duplicate_project( $project_id , $user_id ) {
+	static function duplicate_project( $project_id , $user_id, $order_id = null ) {
 
 		require_once( PROJECT_PANORAMA_DIR . '/lib/vendor/clone/duplicate-post-admin.php' );
 
@@ -466,9 +467,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 		if ( 0 !== $new_id ) {
 
-			update_post_meta( $new_id, '_psp_assigned_users', array( $user_id ) );
-			update_post_meta( $new_id, 'allowed_users_0_user', $user_id );
-			update_post_meta( $new_id, 'allowed_users', 1 );
+			add_row( 'allowed_users', array( 'user' => $user ), $new_id );
 			update_post_meta( $project_id, '_psp_cloned', 1 );
 			update_post_meta( $new_id, 'client', $user->first_name . ' ' . $user->last_name );
 
@@ -477,7 +476,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 			$new_project = array(
 				'ID'          	=> $new_id,
 				'post_status' 	=> 'publish',
-				'post_title'	=> $user->first_name . ' ' . $user->last_name . ': ' . get_the_title($project_id),
+				'post_title'	=> apply_filters( 'psp_woocommerce_new_project_title', $order_id . ' - ' . get_the_title($project_id) . ' (' . $user->first_name . ' ' . $user->last_name . ') ' , $project_id, $order_id, $user_id ),
 				'post_name'		=>	''
 			);
 
