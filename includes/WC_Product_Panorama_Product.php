@@ -22,10 +22,11 @@ class WC_Product_Panorama_Product extends WC_Product {
 		add_action( 'admin_head', array( 'WC_Product_Panorama_Product', 'panorama_settings_icon' ) );
 		add_action( 'woocommerce_product_data_panels',  array( 'WC_Product_Panorama_Product', 'panorama_product_settings' ) );
 		add_action( 'woocommerce_process_product_meta', array( 'WC_Product_Panorama_Product', 'save_panorama_project' ) );
-		// add_action( 'woocommerce_order_status_completed', array( 'WC_Product_Panorama_Product', 'order_completed' ) );
+		//
 		// add_action( 'woocommerce_thankyou', array( 'WC_Product_Panorama_Product', 'auto_complete_order' ) ); woocommerce_payment_complete
 
 		add_action( 'woocommerce_payment_complete', array( 'WC_Product_Panorama_Product', 'auto_complete_order' ) );
+		add_action( 'woocommerce_order_status_completed', array( 'WC_Product_Panorama_Product', 'process_order' ) );
 
 		add_action( 'woocommerce_panorama_product_add_to_cart', array( 'WC_Product_Panorama_Product', 'show_add_to_cart' )) ;
 
@@ -53,7 +54,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 *
 	 * @return void
 	 */
-	function panorama_product_custom_js() {
+	public static function panorama_product_custom_js() {
 
 	    global $post;
 
@@ -107,7 +108,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 *
 	 * @return void
 	 */
-	function panorama_product_settings() {
+	public static function panorama_product_settings() {
 
 		$projects       = array();
 		$projects_query = get_posts(
@@ -132,8 +133,9 @@ class WC_Product_Panorama_Product extends WC_Product {
 			'psp_project_manager'	=>	__( 'Project Manager', 'psp-woocommerce' )
 		) );
 
+		echo '<div id="panorama_product" class="panel woocommerce_options_panel"><div class="options_group">';
+
 		if ( count( $projects ) > 0 ) {
-			echo '<div id="panorama_product" class="panel woocommerce_options_panel"><div class="options_group">';
 
 			woocommerce_wp_select(
 				array(
@@ -153,13 +155,14 @@ class WC_Product_Panorama_Product extends WC_Product {
 				)
 			);
 
-			echo '</div></div>';
 		}
 		else {
-			printf( __( 'You must <a href="%s">create a project</a> first.', 'psp-woocommerce' ), admin_url( 'post-new.php?post_type=psp_projects' ) );
+			echo '<div style="padding: 24px">';
+				printf( __( 'You must <a href="%s">create a project</a> first.', 'psp-woocommerce' ), admin_url( 'post-new.php?post_type=psp_projects' ) );
+			echo '</div>';
 		}
 
-
+		echo '</div></div>';
 
 	}
 
@@ -170,7 +173,7 @@ class WC_Product_Panorama_Product extends WC_Product {
      * @param int $post_id The WC_Product being saved.
 	 * @return void
 	 */
-	function save_panorama_project( $post_id ) {
+	public static function save_panorama_project( $post_id ) {
 
 	    // check if project ID is saved.
 		$project_id = isset( $_POST['psp_woocommerce_panorama_project'] ) && ! empty( $_POST['psp_woocommerce_panorama_project'] ) ? intval( $_POST['psp_woocommerce_panorama_project'] ) : 0;
@@ -208,7 +211,7 @@ class WC_Product_Panorama_Product extends WC_Product {
      * @param array $tabs Current list of Product tabs
 	 * @return array
 	 */
-	function panorama_product_tabs( $tabs) {
+	public static function panorama_product_tabs( $tabs) {
 
 		$tabs['panorama'] = array(
 			'label'  => __( 'Panorama', 'psp-woocommerce' ),
@@ -233,7 +236,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 * @param array $types Current list of Product types
 	 * @return array
 	 */
-    function add_panorama_product_type( $types ) {
+    public static function add_panorama_product_type( $types ) {
 	    $types[ 'panorama_product' ] = __( 'Panorama Product', 'psp-woocommerce' );
 	    return $types;
     }
@@ -247,7 +250,7 @@ class WC_Product_Panorama_Product extends WC_Product {
      * @param string $product_type The type of product
 	 * @return string
 	 */
-	function woocommerce_product_class( $classname, $product_type ) {
+	public static function woocommerce_product_class( $classname, $product_type ) {
 
 		if ( 'panorama_product' === $product_type ) {
 			$classname = 'WC_Product_Panorama_Product';
@@ -277,7 +280,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 		<?php
 	}
 
-	function panorama_process_order( $order_id ) {
+	public static function panorama_process_order( $order_id ) {
 
 		$result 		= false;
 
@@ -340,7 +343,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 * @param int $order_id The order being set to complete.
 	 * @return void
 	 */
-	function auto_complete_order( $order_id ) {
+	public static function auto_complete_order( $order_id ) {
 
 		if ( ! $order_id ) {
 			return;
@@ -352,14 +355,34 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 		if ( $order && $order->status != $status ) {
 
-			$result = WC_Product_Panorama_Product::panorama_process_order( $order_id );
+			$items         = $order->get_items();
+			$project_items = array();
 
-			if( $result ) {
+			$has_items = false;
+
+			foreach ( $items as $item ) {
+
+				$product_id = method_exists( $item, 'get_product_id' ) ? $item->get_product_id() : $item['product_id'];
+				$product    = wc_get_product( $product_id );
+
+				if ( 'panorama_product' === $product->get_type() ) {
+
+					$has_items = true;
+
+				}
+
+			}
+
+			if( $has_items ) {
 				$order->update_status( $status );
 			}
 
 		}
 
+	}
+
+	public static function process_order( $order_id ) {
+		return WC_Product_Panorama_Product::panorama_process_order( $order_id );
 	}
 
 	/**
@@ -369,7 +392,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 *
 	 * @return void
 	 */
-	function show_add_to_cart() {
+	public static function show_add_to_cart() {
 		wc_get_template( 'single-product/add-to-cart/simple.php' );
 	}
 
@@ -383,7 +406,7 @@ class WC_Product_Panorama_Product extends WC_Product {
         return 'panorama_product';
 	}
 
-	function create_duplicate( $post, $status = null, $new_post_author = null ) {
+	public static function create_duplicate( $post, $status = null, $new_post_author = null ) {
 
 		// We don't want to clone revisions
 		if ($post->post_type == 'revision') return;
@@ -457,7 +480,7 @@ class WC_Product_Panorama_Product extends WC_Product {
      * @param int $user_id    The user that purchased the project.
 	 * @return void
 	 */
-	static function duplicate_project( $project_id , $user_id, $order_id = null ) {
+	public static function duplicate_project( $project_id , $user_id, $order_id = null ) {
 
 		require_once( PROJECT_PANORAMA_DIR . '/lib/vendor/clone/duplicate-post-admin.php' );
 
@@ -487,7 +510,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 		}
 	}
 
-	function panorama_copy_post_meta_info( $new_id, $post ) {
+	public static function panorama_copy_post_meta_info( $new_id, $post ) {
 
 		$post_meta_keys = get_post_custom_keys($post->ID);
 
@@ -508,7 +531,7 @@ class WC_Product_Panorama_Product extends WC_Product {
      *
 	 * @return void
 	 */
-	function panorama_woocommerce_template_metabox() {
+	public static function panorama_woocommerce_template_metabox() {
 
 		global $post;
 
@@ -534,7 +557,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 *
 	 * @return void
 	 */
-	public function panorama_woocommerce_save_meta( $post_id ) {
+	public static function panorama_woocommerce_save_meta( $post_id ) {
 
 		if( 'psp_projects' != get_post_type($post_id) ) {
 			return;
@@ -552,7 +575,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	 * Adds link to Panorama dashboard to WooCommerce reciept
 	 * @return [type] [description]
 	 */
-	function custom_order_text( $order_id  ) {
+	public static function custom_order_text( $order_id  ) {
 
 		$projects = get_post_meta( $order_id, '_purchased_psp_project', false );
 
@@ -579,7 +602,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	<?php
 	}
 
-	function custom_order_email_text( $order, $sent_to_admin, $plain_text, $email ) {
+	public static function custom_order_email_text( $order, $sent_to_admin, $plain_text, $email ) {
 
 		$order_id = $order->get_id();
 
@@ -603,7 +626,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 	<?php
 	}
 
-	function panorama_check_required_account() {
+	public static function panorama_check_required_account() {
 
 		$require_account = false;
 
@@ -624,7 +647,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 	}
 
-	function panorama_require_checkout_registration( $checkout = '' ) {
+	public static function panorama_require_checkout_registration( $checkout = '' ) {
 
 		// If the user is logged in or doesn't have a panorama project we don't need this
 		if( is_user_logged_in() || !WC_Product_Panorama_Product::panorama_check_required_account() ) {
@@ -651,7 +674,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 	}
 
-	function panorama_require_checkout_account_fields( $checkout_fields ) {
+	public static function panorama_require_checkout_account_fields( $checkout_fields ) {
 
 		if( is_user_logged_in() || !WC_Product_Panorama_Product::panorama_check_required_account() ) {
 			return $checkout_fields;
@@ -673,7 +696,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 	}
 
-	function panorama_restore_checkout_registration_settings( $checkout = '' ) {
+	public static function panorama_restore_checkout_registration_settings( $checkout = '' ) {
 
 		global $signup_option_changed, $guest_checkout_option_changed;
 
@@ -690,7 +713,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 
 	}
 
-	function force_login( $checkout ) {
+	public static function force_login( $checkout ) {
 
 		$cart_items = WC()->cart->cart_contents;
 
