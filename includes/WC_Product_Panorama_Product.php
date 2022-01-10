@@ -200,6 +200,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 				update_post_meta( $post_id, '_panorama_project_id', $project_id );
 				update_post_meta( $post_id, '_psp_user_role', $user_role );
 			}
+
 		}
 	}
 
