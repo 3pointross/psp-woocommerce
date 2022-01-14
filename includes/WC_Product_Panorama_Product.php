@@ -34,7 +34,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 		add_action( 'woocommerce_email_after_order_table', array( 'WC_Product_Panorama_Product', 'custom_order_email_text' ), 999, 4 );
 
 		add_filter( 'woocommerce_product_data_tabs', array( 'WC_Product_Panorama_Product', 'panorama_product_tabs' ) );
-		add_filter( 'product_type_selector', array( 'WC_Product_Panorama_Product', 'add_panorama_product_type' ) );
+		// add_filter( 'product_type_selector', array( 'WC_Product_Panorama_Product', 'add_panorama_product_type' ) );
 		add_filter( 'woocommerce_product_class', array( 'WC_Product_Panorama_Product', 'woocommerce_product_class' ), 10, 2 );
 
 		add_action( 'post_submitbox_misc_actions', array( 'WC_Product_Panorama_Product', 'panorama_woocommerce_template_metabox' ) );
@@ -121,6 +121,8 @@ class WC_Product_Panorama_Product extends WC_Product {
 			)
 		);
 
+		$projects[] = 'none';
+
 		foreach ( $projects_query as $project ) {
 			$projects[ $project->ID ] = $project->post_title;
 		}
@@ -181,27 +183,20 @@ class WC_Product_Panorama_Product extends WC_Product {
 		// Check if a use role is saved
 		$user_role = isset( $_POST['psp_woocommerce_user_role'] ) && ! empty( $_POST['psp_woocommerce_user_role'] ) ? $_POST['psp_woocommerce_user_role'] : '';
 
-		if ( ! $project_id ) {
-			return;
-		}
-
 		$product = wc_get_product( $post_id );
 
-		if ( 'panorama_product' === $product->get_type() ) {
+		if ( method_exists( $product, 'update_meta_data' ) ) {
+			// WooCommerce 3.x.
+			$product->update_meta_data( '_panorama_project_id', $project_id );
+			$product->update_meta_data( '_psp_user_role', $user_role );
+			$product->save();
 
-			if ( method_exists( $product, 'update_meta_data' ) ) {
-				// WooCommerce 3.x.
-				$product->update_meta_data( '_panorama_project_id', $project_id );
-				$product->update_meta_data( '_psp_user_role', $user_role );
-				$product->save();
-
-			} else {
-				// WooCommerce 2.6.
-				update_post_meta( $post_id, '_panorama_project_id', $project_id );
-				update_post_meta( $post_id, '_psp_user_role', $user_role );
-			}
-
+		} else {
+			// WooCommerce 2.6.
+			update_post_meta( $post_id, '_panorama_project_id', $project_id );
+			update_post_meta( $post_id, '_psp_user_role', $user_role );
 		}
+
 	}
 
 	/**
@@ -217,14 +212,16 @@ class WC_Product_Panorama_Product extends WC_Product {
 		$tabs['panorama'] = array(
 			'label'  => __( 'Panorama', 'psp-woocommerce' ),
 			'target' => 'panorama_product',
-			'class'  => array( 'show_if_panorama_product' ),
+			'class'	=> 'hide_if_variable'
+			// 'class'  => array( 'show_if_simple show_if_grouped show_if_external hide_if_variable' ),
 		);
 
+		/*
 		$tabs['shipping']['class'][]       = 'hide_if_panorama_product';
 		$tabs['linked_product']['class'][] = 'hide_if_panorama_product';
 		$tabs['attribute']['class'][]      = 'show_if_panorama_product';
 		$tabs['variations']['class'][] 	   = 'show_if_panorama_product';
-
+		*/
 
 		return $tabs;
 	}
@@ -301,7 +298,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 				$user_roles[] = $user_role;
 			}
 
-			if ( 'panorama_product' === $product->get_type() ) {
+			if( $product->get_meta('_panorama_project_id') ) {
 
 				$project_id = method_exists( $product, 'get_meta' ) ? $product->get_meta( '_panorama_project_id' ) : get_post_meta( $product_id, '_panorama_project_id', true );
 				$new_id 	= WC_Product_Panorama_Product::duplicate_project( $project_id, $user_id, $order_id );
@@ -315,7 +312,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 		}
 
 		// Check to see if there is a user role set
-		if( !empty($user_roles) ) {
+		if( !empty($user_roles) && $product->get_meta('_panorama_project_id') ) {
 
 			$user = new WP_User( $user_id );
 
@@ -500,7 +497,7 @@ class WC_Product_Panorama_Product extends WC_Product {
 			$new_project = array(
 				'ID'          	=> $new_id,
 				'post_status' 	=> 'publish',
-				'post_title'	=> apply_filters( 'psp_woocommerce_new_project_title', $order_id . ' - ' . get_the_title($project_id) . ' (' . $user->first_name . ' ' . $user->last_name . ') ' , $project_id, $order_id, $user_id ),
+				'post_title'	=> apply_filters( 'psp_woocommerce_new_project_title', get_the_title($project_id) . ' (' . $user->first_name . ' ' . $user->last_name . ') ' , $project_id, $order_id, $user_id ),
 				'post_name'		=>	''
 			);
 

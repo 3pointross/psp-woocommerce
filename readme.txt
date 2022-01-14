@@ -4,6 +4,9 @@ Sell Panorama projects!
 
 # Changelog
 
+1.3
+* Switches product method so you can bundle and trigger projects with other types of WooCommerce products
+
 1.2.3
 * Checks to see if WC is even loaded
 
