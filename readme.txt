@@ -4,6 +4,9 @@ Sell Panorama projects!
 
 # Changelog
 
+1.3.1
+* Adds Panorama notification triggers so you can also send custom added to project emails
+
 1.3
 * Switches product method so you can bundle and trigger projects with other types of WooCommerce products
 

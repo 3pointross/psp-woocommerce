@@ -492,6 +492,18 @@ class WC_Product_Panorama_Product extends WC_Product {
 			update_post_meta( $project_id, '_psp_cloned', 1 );
 			update_post_meta( $new_id, 'client', $user->first_name . ' ' . $user->last_name );
 
+			// Trigger Notifications
+
+			do_action( 'psp_notify', 'user_assigned', array(
+				'post_id' => $new_id,
+				'user_id' => $user_id,
+			) );
+
+			do_action( 'psp_notify', 'users_assigned', array(
+				'post_id'  => $new_id,
+				'user_ids' => array( $user_id )
+			) );
+
 			update_field( 'restrict_access_to_specific_users', array( 'Yes' ), $new_id );
 
 			$new_project = array(
